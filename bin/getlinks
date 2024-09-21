@@ -1,0 +1,18 @@
+#!/bin/bash
+
+URL=$1
+if [ -z "$URL" ]; then
+	echo "usage: getlinks [base] <URL>" >&2
+	exit 1
+fi
+
+BASE=
+
+if [ -n "$2" ]; then
+	BASE="-base $2"
+fi
+
+lynx -listonly -image_links -dump $BASE $URL \
+	| egrep -o "https?:\/\/[^]'\";>[:space:]]+[^]'\"\.;>]"
+	               # literal ] must be first in character class [ ... ]
+
