@@ -13,6 +13,6 @@ if [ -n "$2" ]; then
 fi
 
 lynx -listonly -image_links -dump $BASE $URL \
-	| egrep -o "https?:\/\/[^]'\";>[:space:]]+[^]'\"\.;>]"
+	| egrep -o "[a-zA-Z]+:\/\/[^]'\";>[:space:]]+[^]'\"\.;>]"
 	               # literal ] must be first in character class [ ... ]
 
