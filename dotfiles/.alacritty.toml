@@ -1,5 +1,7 @@
 # https://raw.githubusercontent.com/catppuccin/alacritty/main/catppuccin-mocha.toml
 
+live_config_reload = true
+
 [colors.primary]
 background = "#1e1e2e"
 foreground = "#cdd6f4"
@@ -75,3 +77,7 @@ color = "#fab387"
 [[colors.indexed_colors]]
 index = 17
 color = "#f5e0dc"
+
+[window]
+#opacity = 0.73
+opacity = 1
