@@ -4,7 +4,7 @@ set number
 " set relativenumber
 set tabstop=4
 set shiftwidth=4
-set expandtab
+set noexpandtab
 set autoindent
 set smartindent
 set nocursorline
@@ -26,7 +26,7 @@ autocmd StdinReadPre * let s:std_in=1
 autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists("s:std_in") | execute 'NERDTree' argv()[0] | wincmd p | endif
 
 " C++ filetype settings
-autocmd FileType cpp setlocal shiftwidth=4 tabstop=4 softtabstop=4 expandtab
+autocmd FileType cpp setlocal shiftwidth=4 tabstop=4 softtabstop=4 noexpandtab
 autocmd FileType cpp setlocal makeprg=g++\ -std=c++14\ -Wall\ %\ -o\ %<
 
 " Plugin system: vim-plug (install this separately)
