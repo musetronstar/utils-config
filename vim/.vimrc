@@ -7,7 +7,7 @@ set shiftwidth=4
 set expandtab
 set autoindent
 set smartindent
-" set cursorline
+set nocursorline
 set mouse=a
 
 " Use system clipboard
@@ -36,3 +36,6 @@ call plug#begin('~/.vim/plugged')
 Plug 'preservim/nerdtree'
 
 call plug#end()
+
+" NerdTreee adds a cursorline by default
+let NERDTreeHighlightCursorline=0
