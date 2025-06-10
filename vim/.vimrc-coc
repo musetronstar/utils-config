@@ -1,0 +1,96 @@
+" Basic settings
+syntax on
+set number
+" set relativenumber
+set tabstop=4
+set shiftwidth=4
+set noexpandtab
+set autoindent
+set smartindent
+set nocursorline
+set mouse=a
+
+" Use system clipboard
+" set clipboard=unnamedplus
+
+" Enable line wrapping for readability
+" set wrap
+" set linebreak
+
+" NERDTree configuration
+" Open NERDTree with Ctrl+n
+nnoremap <C-n> :NERDTreeToggle<CR>
+
+" Automatically open NERDTree when Vim starts with a directory
+"autocmd StdinReadPre * let s:std_in=1
+"autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists("s:std_in") | execute 'NERDTree' argv()[0] | wincmd p | endif
+
+" C++ filetype settings
+autocmd FileType cpp setlocal shiftwidth=4 tabstop=4 softtabstop=4 noexpandtab
+autocmd FileType cpp setlocal makeprg=g++\ -std=c++23\ -Wall\ %\ -o\ %<
+
+" Plugin system: vim-plug (install this separately)
+call plug#begin('~/.vim/plugged')
+
+" Plugins
+Plug 'preservim/nerdtree'
+
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+
+" colorscheme
+Plug 'morhetz/gruvbox'
+
+call plug#end()
+
+" NerdTreee adds a cursorline by default
+let NERDTreeHighlightCursorline=0
+
+" Create directories if they don't exist
+if !isdirectory($HOME."/.vim")
+    call mkdir($HOME."/.vim", "", 0770)
+endif
+if !isdirectory($HOME."/.vim/undo-dir")
+    call mkdir($HOME."/.vim/undo-dir", "", 0700)
+endif
+if !isdirectory($HOME."/.vim/backup-dir")
+    call mkdir($HOME."/.vim/backup-dir", "", 0700)
+endif
+if !isdirectory($HOME."/.vim/swap-dir")
+    call mkdir($HOME."/.vim/swap-dir", "", 0700)
+endif
+
+" Store swap files in ~/.vim/swap-dir
+set directory=~/.vim/swap-dir//
+
+" Store backup files in ~/.vim/backup-dir
+set backupdir=~/.vim/backup-dir//
+
+" Store undo files in ~/.vim/undo-dir
+set undodir=~/.vim/undo-dir//
+set undofile
+
+" Disable backup files entirely (optional)
+" set nobackup
+" set nowritebackup
+
+" Coc settings
+" " Use 'K' to show documentation from coc.nvim instead of man
+nnoremap <silent> K :call CocActionAsync('doHover')<CR>
+" LSP navigation keybindings for coc.nvim
+nnoremap <silent> gd <Plug>(coc-definition)
+nnoremap <silent> gy <Plug>(coc-type-definition)
+nnoremap <silent> gi <Plug>(coc-implementation)
+nnoremap <silent> gr <Plug>(coc-references)
+nnoremap <leader>ih :CocCommand clangd.toggleInlayHints<CR>
+" Only map <Tab> for completion, let <CR> insert a newline
+inoremap <silent><expr> <Tab> pumvisible() ? coc#_select_confirm() : "\<Tab>"
+inoremap <silent><expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<C-h>"
+
+" Enable truecolor support
+set termguicolors
+
+" Optional: choose a theme that supports it
+set background=dark
+colorscheme gruvbox        " or your preferred colorscheme
+hi Normal guibg=NONE ctermbg=NONE
+hi NonText guibg=NONE ctermbg=NONE

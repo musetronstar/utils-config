@@ -1,0 +1,12 @@
+{
+  // Arguments passed to the clangd language server
+  "clangd.arguments": [
+    "--background-index",        // Build a project-wide symbol index in the background for faster code navigation
+    "--header-insertion=never",  // Do not automatically insert #include directives when completing symbols
+    "--clang-tidy"               // Enable clang-tidy diagnostics (for static analysis and linting)
+  ],
+  // disable inlayHints
+  "inlayHint.enable": false,
+  // Enables preselection of completion items to improve IntelliSense suggestions
+  "suggest.enablePreselect": true
+}
