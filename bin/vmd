@@ -1,8 +1,95 @@
-#!/bin/bash
-# parse/lints a mardown file and views the rendered HTML in a firefox tab
+#!/usr/bin/env bash
+set -euo pipefail
 
+usage() {
+  cat <<'EOF'
+Usage: vmd [OPTIONS] file.md
+
+Default: render styled HTML (GitHub-ish) and open in Firefox.
+
+Options:
+  -p, --plain     Render plain HTML only (no wrapper/CSS/JS)
+      --stdout    Write HTML to STDOUT (do not open browser)
+  -h, --help      Show this help
+EOF
+  exit 1
+}
+
+PLAIN=false
+TO_STDOUT=false
+
+# Parse options
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -p|--plain)
+      PLAIN=true
+      shift
+      ;;
+    --stdout)
+      TO_STDOUT=true
+      shift
+      ;;
+    -h|--help)
+      usage
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      usage
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+# Require file argument
+[[ $# -eq 1 ]] || usage
 MD_FILE="$1"
-HTML_FILE=/tmp/markdown-viewer.html
 
-cmark-gfm "$MD_FILE" > $HTML_FILE
-firefox --new-tab $HTML_FILE
+if [[ ! -f "$MD_FILE" ]]; then
+  echo "Error: File not found: $MD_FILE" >&2
+  exit 1
+fi
+
+# Render function: writes HTML to stdout
+render() {
+  if $PLAIN; then
+    cmark-gfm "$MD_FILE"
+  else
+    # GitHub-like markdown styling + code highlighting
+    CSS_MD="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown.min.css"
+    CSS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/styles/github.min.css"
+    JS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/lib/highlight.min.js"
+
+    cat <<EOF
+<!doctype html>
+<meta charset="utf-8">
+<link rel="stylesheet" href="$CSS_MD">
+<link rel="stylesheet" href="$CSS_HL">
+<style>
+  body{box-sizing:border-box;min-width:200px;max-width:980px;margin:40px auto;padding:0 10px}
+</style>
+<article class="markdown-body">
+$(cmark-gfm "$MD_FILE")
+</article>
+<script src="$JS_HL"></script>
+<script>hljs.highlightAll();</script>
+EOF
+  fi
+}
+
+if $TO_STDOUT; then
+  render
+  exit 0
+fi
+
+HTML_FILE="$(mktemp --suffix=.html)"
+render > "$HTML_FILE"
+
+firefox --new-tab "file://$HTML_FILE" >/dev/null 2>&1 & disown
+
+# Data URL: no temp file approach
+#firefox "data:text/html;base64,$(render | base64 -w0)"
+
+echo "Rendered to: $HTML_FILE"
+
