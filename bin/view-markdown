@@ -1,0 +1,8 @@
+#!/bin/bash
+# parse/lints a mardown file and views the rendered HTML in a firefox tab
+
+MD_FILE="$1"
+HTML_FILE=/tmp/markdown-viewer.html
+
+cmark-gfm "$MD_FILE" > $HTML_FILE
+firefox --new-tab $HTML_FILE
