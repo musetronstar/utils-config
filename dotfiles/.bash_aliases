@@ -7,6 +7,7 @@ alias o="xdg-open"
 alias t="tree"
 alias httagd="/home/inc/projects/tagd/httagd/bin/httagd"
 alias tagsh="/home/inc/projects/tagd/tagsh/bin/tagsh"
+alias copy="xclip -sel clip"  # copy from STDIN to clipboard
 
 mkcd() {
 	# mkdir all options and arguments
