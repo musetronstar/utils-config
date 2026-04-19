@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: vmd [-p|--plain] [--stdout] file.md"
+  echo "Usage: vmd [-p|--plain] [--stdout] file.md" >&2
   exit 1
 }
 
@@ -32,12 +32,16 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ $# -eq 1 ]] || usage
+
 MD_FILE="$1"
-[[ -f "$MD_FILE" ]] || { echo "Error: file not found: $MD_FILE" >&2; exit 1; }
+[[ -f "$MD_FILE" ]] || {
+  echo "Error: file not found: $MD_FILE" >&2
+  exit 1
+}
 
 TITLE="$(basename "$MD_FILE")"
 
-render_md() {
+render_md_html() {
   cmark-gfm \
     --extension table \
     --extension strikethrough \
@@ -48,15 +52,56 @@ render_md() {
     "$MD_FILE"
 }
 
+render_md() {
+  # Keep highlighting server-side here: browser-side highlight.js on file:// pages
+  # proved brittle in practice, while this embedded Pygments pass preserves
+  # fenced-language highlighting reliably for the generated standalone HTML.
+  render_md_html | python3 -c '
+import html
+import re
+import sys
+
+try:
+    from pygments import highlight
+    from pygments.formatters import HtmlFormatter
+    from pygments.lexers import get_lexer_by_name
+    from pygments.lexers.special import TextLexer
+except Exception:
+    sys.stdout.write(sys.stdin.read())
+    raise SystemExit(0)
+
+source = sys.stdin.read()
+formatter = HtmlFormatter(nowrap=False, cssclass="highlight")
+pattern = re.compile(
+    r"<pre><code(?: class=\"([^\"]+)\")?>(.*?)</code></pre>",
+    re.DOTALL,
+)
+
+def repl(match):
+    classes = match.group(1) or ""
+    code = html.unescape(match.group(2))
+    lang = None
+    for name in classes.split():
+        if name.startswith("language-"):
+            lang = name[len("language-"):]
+            break
+
+    try:
+        lexer = get_lexer_by_name(lang) if lang else TextLexer()
+    except Exception:
+        lexer = TextLexer()
+
+    return highlight(code, lexer, formatter)
+
+sys.stdout.write(pattern.sub(repl, source))
+'
+}
+
 render() {
   if $PLAIN; then
-    render_md
+    render_md_html
   else
-    CSS_MD_LIGHT="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown.min.css"
-    CSS_MD_DARK="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown-dark.min.css"
-    CSS_HL_LIGHT="https://cdn.jsdelivr.net/npm/highlight.js@latest/styles/github.min.css"
-    CSS_HL_DARK="https://cdn.jsdelivr.net/npm/highlight.js@latest/styles/github-dark.min.css"
-    JS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/highlight.min.js"
+    CSS_MD="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown.min.css"
 
     cat <<EOF
 <!doctype html>
@@ -65,12 +110,8 @@ render() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>$TITLE</title>
-<link rel="stylesheet" href="$CSS_MD_LIGHT" media="(prefers-color-scheme: light)">
-<link rel="stylesheet" href="$CSS_MD_DARK"  media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="$CSS_HL_LIGHT" media="(prefers-color-scheme: light)">
-<link rel="stylesheet" href="$CSS_HL_DARK"  media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="$CSS_MD">
 <style>
-  :root { color-scheme: light dark; }
   body {
     box-sizing: border-box;
     min-width: 200px;
@@ -79,16 +120,28 @@ render() {
     padding: 0 16px 40px 16px;
   }
   img { max-width: 100%; height: auto; }
-  pre { overflow-x: auto; }
+  .highlight {
+    overflow-x: auto;
+    padding: 16px;
+    border-radius: 8px;
+    background: #f6f8fa;
+  }
+  .highlight pre {
+    margin: 0;
+    overflow: visible;
+    background: transparent;
+  }
   table { display: block; overflow-x: auto; white-space: nowrap; }
+$(python3 -c '
+from pygments.formatters import HtmlFormatter
+print(HtmlFormatter(cssclass="highlight").get_style_defs(".highlight"))
+')
 </style>
 </head>
 <body>
 <article class="markdown-body">
 $(render_md)
 </article>
-<script src="$JS_HL"></script>
-<script>hljs.highlightAll();</script>
 </body>
 </html>
 EOF
@@ -103,6 +156,7 @@ fi
 HTML_FILE="$(mktemp --suffix=.html)"
 render > "$HTML_FILE"
 
-firefox --new-tab "file://$HTML_FILE" >/dev/null 2>&1 & disown
-echo "Rendered to: $HTML_FILE"
+firefox --new-tab "file://$HTML_FILE" >/dev/null 2>&1 &
+disown || true
 
+echo "Rendered to: $HTML_FILE"
