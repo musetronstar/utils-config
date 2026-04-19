@@ -51,17 +51,28 @@ if [[ ! -f "$MD_FILE" ]]; then
   exit 1
 fi
 
+render_md() {
+  cmark-gfm \
+    --extension table \
+    --extension strikethrough \
+    --extension autolink \
+    --extension tasklist \
+    --extension footnotes \
+    --extension tagfilter \
+	"$MD_FILE"
+}
+
 # Render function: writes HTML to stdout
 render() {
   if $PLAIN; then
-    cmark-gfm "$MD_FILE"
+    render_md
   else
     # GitHub-like markdown styling + code highlighting
     CSS_MD="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown.min.css"
     CSS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/styles/github.min.css"
     JS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/lib/highlight.min.js"
 
-    cat <<EOF
+	cat <<EOF
 <!doctype html>
 <meta charset="utf-8">
 <link rel="stylesheet" href="$CSS_MD">
@@ -70,11 +81,12 @@ render() {
   body{box-sizing:border-box;min-width:200px;max-width:980px;margin:40px auto;padding:0 10px}
 </style>
 <article class="markdown-body">
-$(cmark-gfm "$MD_FILE")
+$(render_md)
 </article>
 <script src="$JS_HL"></script>
 <script>hljs.highlightAll();</script>
 EOF
+
   fi
 }
 
