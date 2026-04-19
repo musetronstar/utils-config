@@ -2,23 +2,13 @@
 set -euo pipefail
 
 usage() {
-  cat <<'EOF'
-Usage: vmd [OPTIONS] file.md
-
-Default: render styled HTML (GitHub-ish) and open in Firefox.
-
-Options:
-  -p, --plain     Render plain HTML only (no wrapper/CSS/JS)
-      --stdout    Write HTML to STDOUT (do not open browser)
-  -h, --help      Show this help
-EOF
+  echo "Usage: vmd [-p|--plain] [--stdout] file.md"
   exit 1
 }
 
 PLAIN=false
 TO_STDOUT=false
 
-# Parse options
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -p|--plain)
@@ -33,7 +23,6 @@ while [[ $# -gt 0 ]]; do
       usage
       ;;
     -*)
-      echo "Unknown option: $1" >&2
       usage
       ;;
     *)
@@ -42,14 +31,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Require file argument
 [[ $# -eq 1 ]] || usage
 MD_FILE="$1"
+[[ -f "$MD_FILE" ]] || { echo "Error: file not found: $MD_FILE" >&2; exit 1; }
 
-if [[ ! -f "$MD_FILE" ]]; then
-  echo "Error: File not found: $MD_FILE" >&2
-  exit 1
-fi
+TITLE="$(basename "$MD_FILE")"
 
 render_md() {
   cmark-gfm \
@@ -59,34 +45,53 @@ render_md() {
     --extension tasklist \
     --extension footnotes \
     --extension tagfilter \
-	"$MD_FILE"
+    "$MD_FILE"
 }
 
-# Render function: writes HTML to stdout
 render() {
   if $PLAIN; then
     render_md
   else
-    # GitHub-like markdown styling + code highlighting
-    CSS_MD="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown.min.css"
-    CSS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/styles/github.min.css"
-    JS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/lib/highlight.min.js"
+    CSS_MD_LIGHT="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown.min.css"
+    CSS_MD_DARK="https://cdn.jsdelivr.net/npm/github-markdown-css@latest/github-markdown-dark.min.css"
+    CSS_HL_LIGHT="https://cdn.jsdelivr.net/npm/highlight.js@latest/styles/github.min.css"
+    CSS_HL_DARK="https://cdn.jsdelivr.net/npm/highlight.js@latest/styles/github-dark.min.css"
+    JS_HL="https://cdn.jsdelivr.net/npm/highlight.js@latest/highlight.min.js"
 
-	cat <<EOF
+    cat <<EOF
 <!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
-<link rel="stylesheet" href="$CSS_MD">
-<link rel="stylesheet" href="$CSS_HL">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$TITLE</title>
+<link rel="stylesheet" href="$CSS_MD_LIGHT" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="$CSS_MD_DARK"  media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="$CSS_HL_LIGHT" media="(prefers-color-scheme: light)">
+<link rel="stylesheet" href="$CSS_HL_DARK"  media="(prefers-color-scheme: dark)">
 <style>
-  body{box-sizing:border-box;min-width:200px;max-width:980px;margin:40px auto;padding:0 10px}
+  :root { color-scheme: light dark; }
+  body {
+    box-sizing: border-box;
+    min-width: 200px;
+    max-width: 980px;
+    margin: 40px auto;
+    padding: 0 16px 40px 16px;
+  }
+  img { max-width: 100%; height: auto; }
+  pre { overflow-x: auto; }
+  table { display: block; overflow-x: auto; white-space: nowrap; }
 </style>
+</head>
+<body>
 <article class="markdown-body">
 $(render_md)
 </article>
 <script src="$JS_HL"></script>
 <script>hljs.highlightAll();</script>
+</body>
+</html>
 EOF
-
   fi
 }
 
@@ -99,9 +104,5 @@ HTML_FILE="$(mktemp --suffix=.html)"
 render > "$HTML_FILE"
 
 firefox --new-tab "file://$HTML_FILE" >/dev/null 2>&1 & disown
-
-# Data URL: no temp file approach
-#firefox "data:text/html;base64,$(render | base64 -w0)"
-
 echo "Rendered to: $HTML_FILE"
 
